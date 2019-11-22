@@ -1,0 +1,59 @@
+version: '3'
+services:
+  proxy:
+    image: jwilder/nginx-proxy:latest
+    ports:
+      - "80:80"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+    depends_on:
+      - master
+      - mongo
+      - redis
+      - storage
+  master:
+    image: narra/master:latest
+    depends_on:
+      - mongo
+      - redis
+      - storage
+    ports:
+     - "8080:8080"
+    env_file:
+      - ./narra.env
+    environment:
+      - VIRTUAL_HOST=api.narra
+      - VIRTUAL_PORT=8080
+  worker:
+    image: narra/worker:latest
+    depends_on:
+      - master
+      - mongo
+      - redis
+      - storage
+    env_file:
+      - ./narra.env
+  mongo:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+  storage:
+    image: minio/minio
+    ports:
+      - "9000:9000"
+    volumes:
+      - storage:/data
+    environment:
+      - VIRTUAL_HOST=storage.narra
+      - VIRTUAL_PORT=9000
+      - MINIO_ACCESS_KEY=minio
+      - MINIO_SECRET_KEY=minio123
+    command: server /data
+volumes:
+  storage:
+  mongo_data:
+  redis_data:
